@@ -3,6 +3,7 @@ name: My First Pipeline
 on: push
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -21,4 +22,18 @@ jobs:
         run: |
          docker push ${{secrets.DOCKER_USERNAME}}/ciportfolio
          docker push ${{secrets.DOCKER_USERNAME}}/ciportfolio:${{github.run_number}}
-  
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH to linux server and run container
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{secrets.HOST}}
+          username: ${{secrets.SSH_USERNAME}}
+          key: ${{secrets.PRIVATE_KEY}}
+          port: ${{secrets.PORT}}
+          script: |
+            docker rm -f portfolio || echo "container not found, skipping removal"
+            docker run -d --name portfolio -p 8080:80 ${{secrets.DOCKER_USERNAME}}/ciportfolio
